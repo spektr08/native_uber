@@ -96,21 +96,66 @@ export const calculateDriverTimes = async ({
   try {
     const timesPromises = markers.map(async (marker) => {
       const responseToUser = await fetch(
-        `https://maps.googleapis.com/maps/api/directions/json?origin=${marker.latitude},${marker.longitude}&destination=${userLatitude},${userLongitude}&key=${directionsAPI}`,
+        `https://routes.googleapis.com/directions/v2:computeRoutes`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": directionsAPI, // Replace with your API key
+            "X-Goog-FieldMask": "routes.duration",
+          },
+          body: JSON.stringify({
+            origin: {
+              location: {
+                latLng: { latitude: marker.latitude, longitude: marker.longitude },
+              },
+            },
+            destination: {
+              location: {
+                latLng: { latitude: userLatitude, longitude: userLongitude },
+              },
+            },
+            travelMode: "DRIVE",
+            routingPreference: "TRAFFIC_AWARE",
+          }),
+        }
       );
+
       const dataToUser = await responseToUser.json();
-      const timeToUser = dataToUser.routes[0].legs[0].duration.value; // Time in seconds
+      const timeToUser = parseInt(dataToUser.routes?.[0]?.duration.replace("s", "")) || 0; // Time in seconds
 
       const responseToDestination = await fetch(
-        `https://maps.googleapis.com/maps/api/directions/json?origin=${userLatitude},${userLongitude}&destination=${destinationLatitude},${destinationLongitude}&key=${directionsAPI}`,
+        `https://routes.googleapis.com/directions/v2:computeRoutes`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": directionsAPI, // Replace with your API key
+            "X-Goog-FieldMask": "routes.duration",
+          },
+          body: JSON.stringify({
+            origin: {
+              location: {
+                latLng: { latitude: userLatitude, longitude: userLongitude },
+              },
+            },
+            destination: {
+              location: {
+                latLng: { latitude: destinationLatitude, longitude: destinationLongitude },
+              },
+            },
+            travelMode: "DRIVE",
+            routingPreference: "TRAFFIC_AWARE",
+          }),
+        }
       );
+
       const dataToDestination = await responseToDestination.json();
-      const timeToDestination =
-        dataToDestination.routes[0].legs[0].duration.value; // Time in seconds
+      const timeToDestination = parseInt(dataToDestination.routes?.[0]?.duration.replace("s", "")) || 0; // Time in seconds
 
-      const totalTime = (timeToUser + timeToDestination) / 60; // Total time in minutes
-      const price = (totalTime * 0.5).toFixed(2); // Calculate price based on time
-
+      const totalTime = (timeToUser + timeToDestination) / 60; // Convert to minutes
+      const price = (totalTime * 0.5).toFixed(2); // Example price calculation
+  
       return { ...marker, time: totalTime, price };
     });
 
@@ -119,6 +164,7 @@ export const calculateDriverTimes = async ({
     console.error("Error calculating driver times:", error);
   }
 };
+
 
 const decodePolyline = (encoded: string) => {
   let points = [];
@@ -155,7 +201,6 @@ const decodePolyline = (encoded: string) => {
 };
 
 export async function calculateDirections(userLatitude:number | null, userLongitude:number | null, destinationLatitude:number | null, destinationLongitude:number | null){
-  const directionsAPI = process.env.EXPO_PUBLIC_DIRECTIONS_API_KEY;
   const url = `https://routes.googleapis.com/directions/v2:computeRoutes`;
   
   const body = {
