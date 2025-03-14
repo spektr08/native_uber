@@ -1,11 +1,24 @@
 import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@clerk/clerk-expo";
 
-export const fetchAPI = async (url: string, options?: RequestInit) => {
+export const fetchAPI = async (url: string, options: RequestInit = {}) => {
   try {
-    const response = await fetch(url, options);
+    const { getToken } = useAuth();
+    const token = await getToken(); // Get Clerk authentication token
+
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        ...options.headers,
+        Authorization: `Bearer ${token}`, // Attach token
+        "Content-Type": "application/json",
+      },
+    });
+
     if (!response.ok) {
-      new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`HTTP error! Status: ${response.status}`);
     }
+
     return await response.json();
   } catch (error) {
     console.error("Fetch error:", error);
@@ -13,28 +26,44 @@ export const fetchAPI = async (url: string, options?: RequestInit) => {
   }
 };
 
-export const useFetch = <T>(url: string, options?: RequestInit) => {
+export const useFetch = <T,>(url: string, options?: RequestInit) => {
+  const { getToken } = useAuth();
   const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const result = await fetchAPI(url, options);
-      setData(result.data);
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, [url, options]);
-
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
 
-  return { data, loading, error, refetch: fetchData };
+      try {
+        const token = await getToken(); // Get Clerk authentication token
+        const response = await fetch(url, {
+          ...options,
+          headers: {
+            ...options?.headers,
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        setData(result.data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unknown error");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [url]); // Runs whenever `url` changes
+
+  return { data, loading, error };
 };
+

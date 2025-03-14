@@ -51,7 +51,7 @@ const SignUp = () => {
         code: verification.code,
       });
       if (completeSignUp.status === "complete") {
-        await fetchAPI("/(api)/user", {
+        await fetchAPI("http://176.100.2.11:3000/user", {
           method: "POST",
           body: JSON.stringify({
             name: form.name,

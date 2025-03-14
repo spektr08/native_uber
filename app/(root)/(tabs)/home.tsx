@@ -38,7 +38,7 @@ const Home = () => {
     data: recentRides,
     loading,
     error,
-  } = useFetch<Ride[]>(`/(api)/ride/${user?.id}`);
+  } = useFetch<Ride[]>(`http://176.100.2.11:3000/rides?id=${user?.id}`);
 
   useEffect(() => {
     (async () => {

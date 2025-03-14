@@ -25,7 +25,7 @@ const Map = () => {
   } = useLocationStore();
   const { selectedDriver, setDrivers } = useDriverStore();
 
-  const { data: drivers, loading, error } = useFetch<Driver[]>("/(api)/driver");
+  const { data: drivers, loading, error } = useFetch<Driver[]>("http://176.100.2.11:3000/drivers");
   const [markers, setMarkers] = useState<MarkerData[]>([]);
   const [routeCoordinates, setRouteCoordinates] = useState([]);
   useEffect(() => {
