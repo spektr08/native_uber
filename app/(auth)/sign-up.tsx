@@ -13,7 +13,7 @@ import { fetchAPI } from "@/lib/fetch";
 const SignUp = () => {
   const { isLoaded, signUp, setActive } = useSignUp();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-
+  const clerkSecret = process.env.CLERK_SECRET_KEY!;
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -51,6 +51,17 @@ const SignUp = () => {
         code: verification.code,
       });
       if (completeSignUp.status === "complete") {
+        await fetchAPI(`https://api.clerk.com/v1/users/${completeSignUp.createdUserId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${clerkSecret}`, // Use your Clerk API key here
+          },
+          body: JSON.stringify({
+            public_metadata: { role: "user" }, // Set role in public metadata
+          }),
+        });
+
         await fetchAPI("http://176.100.2.11:3000/user", {
           method: "POST",
           body: JSON.stringify({
